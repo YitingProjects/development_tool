@@ -3,7 +3,6 @@ package utils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import cn.tudihis.common.config.Constant;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -13,6 +12,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
+import constant.ObjectMapperConstant;
 
 public class ObjectMapperCreator {
   public static ObjectMapper objectMapper() {
@@ -37,10 +37,10 @@ public class ObjectMapperCreator {
 
   private static JavaTimeModule getJavaTimeModule() {
     final JavaTimeModule javaTimeModule = new JavaTimeModule();
-    javaTimeModule.addDeserializer(LocalDateTime.class, new CustomLocalDateTimeDeserializer(Constant.TimeFormat));
-    javaTimeModule.addDeserializer(LocalDate.class, new CustomLocalDateDeserializer(Constant.DateFormat));
-    javaTimeModule.addSerializer(new LocalDateSerializer(Constant.DateFormat));
-    javaTimeModule.addSerializer(new LocalDateTimeSerializer(Constant.TimeFormat));
+    javaTimeModule.addDeserializer(LocalDateTime.class, new CustomLocalDateTimeDeserializer(ObjectMapperConstant.TimeFormat));
+    javaTimeModule.addDeserializer(LocalDate.class, new CustomLocalDateDeserializer(ObjectMapperConstant.DateFormat));
+    javaTimeModule.addSerializer(new LocalDateSerializer(ObjectMapperConstant.DateFormat));
+    javaTimeModule.addSerializer(new LocalDateTimeSerializer(ObjectMapperConstant.TimeFormat));
     return javaTimeModule;
   }
 }
