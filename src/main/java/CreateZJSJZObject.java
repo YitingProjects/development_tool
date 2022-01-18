@@ -30,6 +30,10 @@ public class CreateZJSJZObject {
           type = "String";
         } else if (split[3].equals("日期时间型")) {
           type = "LocalDateTime";
+        } else if (split[3].equals("日期型")) {
+          type = "LocalDate";
+        } else if (split[3].equals("数值型")) {
+          type = "BigDecimal";
         } else {
           type = "???";
         }
