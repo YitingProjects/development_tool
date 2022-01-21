@@ -23,25 +23,42 @@ import com.sun.javafx.binding.StringFormatter;
 import javafx.util.Pair;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl;
 import utils.ObjectMapperCreator;
 
 public class CreateBuilderByJson {
-  private static boolean builderMode = true;
+  private static boolean builderMode = false;
   private static boolean createExpression = true;
+  private static boolean isTudiHandler = false;
+  private static boolean createBasicBuilder = true;
 
   public static void main(String[] args) throws IOException, URISyntaxException, NoSuchFieldException, InstantiationException, IllegalAccessException {
 
     Class<?> type = Integer.class;
     ObjectMapper objectMapper = ObjectMapperCreator.objectMapper();
 
-    if (createExpression) {
-      toCreateExpression(type);
+    if (createBasicBuilder) {
+      createBasicBuilder(type);
     } else {
-      final Object o = toInitJson(type);
-      System.out.println(objectMapper.writeValueAsString(o));
+      if (createExpression) {
+        toCreateExpression(type);
+      } else {
+        final Object o = toInitJson(type);
+        System.out.println(objectMapper.writeValueAsString(o));
+      }
     }
+  }
+
+  private static void createBasicBuilder(Class<?> type) {
+    final String variableName = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, type.getSimpleName());
+    String output = type.getSimpleName() + " " + variableName + "=" + type.getSimpleName() + ".builder()\n";
+    for (Field field : type.getDeclaredFields()) {
+      output += StringFormatter.format(".%s()\n", field.getName()).getValue();
+    }
+    output += ".build();";
+    System.out.println(output);
   }
 
   private static Object toInitJson(final Class<?> type) throws InstantiationException, IllegalAccessException {
@@ -70,10 +87,11 @@ public class CreateBuilderByJson {
       final JSONArray jsonArray = new JSONArray(text);
       final String listName = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, type.getSimpleName()) + "List";
       getListExpression(type, jsonArray, listName);
-    } catch (Exception e) {
+    } catch (JSONException e) {
       JSONObject obj = new JSONObject(text);
       getObject(obj, type, null);
     }
+
     System.out.println();
     System.out.println();
     System.out.println();
@@ -83,7 +101,7 @@ public class CreateBuilderByJson {
    * Print builder expression of object and then return the variable naming
    * */
   private static String getObject(JSONObject obj, Class<?> type, Integer numAfterVariableName) throws NoSuchFieldException {
-    String variableName = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, type.getSimpleName());
+    String variableName = getFieldNameByJsonAttribute(type.getSimpleName(), CaseFormat.UPPER_CAMEL);
     if (numAfterVariableName != null) {
       variableName += numAfterVariableName;
     }
@@ -91,7 +109,7 @@ public class CreateBuilderByJson {
     Map<String, String> builderMap = new HashMap<>();
 
     for (String key : obj.keySet()) {
-      final String fieldName = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, key);
+      final String fieldName = getFieldNameByJsonAttribute(key, CaseFormat.LOWER_UNDERSCORE);
       final Object value = obj.get(key);
 
       Object fieldValue;
@@ -108,7 +126,7 @@ public class CreateBuilderByJson {
       } else if (value instanceof JSONArray) {
         JSONArray jsonArray = (JSONArray) value;
         final Class<?> subType = (Class<?>) ((ParameterizedTypeImpl) type.getDeclaredField(fieldName).getGenericType()).getActualTypeArguments()[0];
-        final String listName = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, fieldName);
+        final String listName = getFieldNameByJsonAttribute(fieldName, CaseFormat.UPPER_CAMEL);
 
         if (!jsonArray.isEmpty() && !(((JSONArray) value).get(0) instanceof JSONObject)) {
           getListExpression(subType, jsonArray, listName);
@@ -124,10 +142,14 @@ public class CreateBuilderByJson {
           builderMap.put(field.getName(), listName);
         }
       } else {
-        final Field field = getField(type, fieldName, key);
-        final Class<?> fieldType = field.getType();
-        fieldValue = getFieldValueString(value, fieldType);
-        builderMap.put(field.getName(), fieldValue.toString());
+        try {
+          final Field field = getField(type, fieldName, key);
+          final Class<?> fieldType = field.getType();
+          fieldValue = getFieldValueString(value, fieldType);
+          builderMap.put(field.getName(), fieldValue.toString());
+        } catch (Exception e) {
+          System.out.printf("ignore field=%s\n", fieldName);
+        }
       }
     }
 
@@ -152,6 +174,14 @@ public class CreateBuilderByJson {
     }
     System.out.println(output);
     return variableName;
+  }
+
+  private static String getFieldNameByJsonAttribute(final String key, final CaseFormat lowerUnderscore) {
+    if (isTudiHandler) {
+      return key;
+    } else {
+      return lowerUnderscore.to(CaseFormat.LOWER_CAMEL, key);
+    }
   }
 
   /**
