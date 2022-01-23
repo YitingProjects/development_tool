@@ -2,6 +2,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.FieldDeclaration;
@@ -13,11 +15,11 @@ import utils.PropertiesReader;
 
 public class CreateMdByObject {
   public static void main(String[] args) throws URISyntaxException {
-    String filePath = "/com/tudihis/ushis/dto/record/RecordDto.java" +
-      "";
+//    String filePath = "com/tudihis/ushis/dto/clinic/ClinicSettingDto.java";
+    String filePath = "ybserver/src/main/java/cn/tudihis/ybserver/dto/zjsjz/output/ZJSJZ1901OutputNode.java";
 
     PropertiesReader propertiesReader = new PropertiesReader();
-    final String projectRoot = propertiesReader.getProperty("java-project-root2");
+    final String projectRoot = propertiesReader.getProperty("java-project-root3");
     final File file = new File(projectRoot + "/" + filePath);
     try {
       final CompilationUnit parse = StaticJavaParser.parse(file);
@@ -28,12 +30,16 @@ public class CreateMdByObject {
       System.out.println("__" + className + "__");
 
       for (FieldDeclaration field : fields) {
-        final String typeName = field.getElementType().asString();
+        String typeName = field.getElementType().asString();
         final String variableName = field.getVariables().get(0).getNameAsString();
         String camelVariableName = CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, variableName);
         final String comment = field.getComment().orElse(
           field.getVariable(0).getComment().orElse(new LineComment(""))
         ).getContent().trim();
+
+        if (typeName.startsWith("List")) {
+          typeName = toArrayName(typeName) + "[]";
+        }
 
         System.out.println(StringFormatter.format("* %s %s: %s", typeName, camelVariableName, comment).getValue());
       }
@@ -44,5 +50,13 @@ public class CreateMdByObject {
     System.out.println();
     System.out.println();
     System.out.println();
+  }
+
+  private static String toArrayName(String name) {
+    final Pattern compile = Pattern.compile("List<(.*)>");
+    final Matcher matcher = compile.matcher(name);
+    matcher.find();
+    final String type = matcher.group(1);
+    return type;
   }
 }
